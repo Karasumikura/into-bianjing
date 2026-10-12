@@ -6,6 +6,7 @@ import { ArrowUpRight, ArrowRight, ArrowLeft, ChevronRight, X, Play, Pause, Comp
 import { chapters, hotspots, routes, questions } from './data'
 import { useMuseum } from './store'
 import InkAtmosphere from './components/InkAtmosphere.vue'
+import { createAmbient } from './ambient'
 const asset = path => import.meta.env.BASE_URL + path
 const route = useRoute(), router = useRouter(), museum = useMuseum()
 const page = computed(() => route.path.slice(1) || 'home')
@@ -31,7 +32,11 @@ const earned = computed(() => [
   { name: '博古通今', condition: '问答答对至少四题', done: museum.quizBest >= 4 },
   { name: '长卷行者', condition: '发现全部十五个故事', done: museum.visited.length === 15 },
 ])
-let cleanupResize, tourTimer, toastTimer, ambient, audioContext, touchPoints = new globalThis.Map(), lastPinch = 0, speechToken = 0
+let cleanupResize, tourTimer, toastTimer, soundRequested = false, touchPoints = new globalThis.Map(), lastPinch = 0, speechToken = 0
+const ambient = createAmbient(enabled => {
+  if (!enabled && museum.settings.sound) soundRequested = false
+  museum.setting('sound', enabled)
+})
 const drag = { down: false, x: 0, y: 0, pan: 0, offset: 0, moved: false, velocity: 0, lastX: 0, lastTime: 0, pinched: false }
 function notify(message) { toast.value = message; clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.value = '', 3200) }
 function go(path) { mobileMenu.value = false; router.push(path); window.scrollTo({ top: 0, behavior: museum.settings.motion ? 'smooth' : 'instant' }) }
@@ -125,18 +130,15 @@ async function share() {
   } catch(e) { if (e.name !== 'AbortError') notify('分享不可用，请复制浏览器地址') }
 }
 function setAtmosphere(mode) { museum.setting('atmosphere', mode) }
-function toggleSound() {
-  if (museum.settings.sound) { museum.setting('sound', false); stopAmbient(); return }
+async function toggleSound() {
+  if (soundRequested) { stopAmbient(); return }
+  soundRequested = true
   try {
-    audioContext ||= new (window.AudioContext || window.webkitAudioContext)()
-    audioContext.resume()
-    const gain = audioContext.createGain(); gain.gain.value = .016; gain.connect(audioContext.destination)
-    const notes = [130.81, 196, 261.63]
-    const oscillators = notes.map(frequency => { const osc = audioContext.createOscillator(); osc.type = 'sine'; osc.frequency.value = frequency; osc.connect(gain); osc.start(); return osc })
-    ambient = { gain, oscillators }; museum.setting('sound', true); notify('轻柔环境音已开启')
-  } catch { notify('此设备不支持环境音') }
+    if (await ambient.start()) notify('风水环境音已开启')
+  } catch { soundRequested = false; notify('环境音未能播放，请再次点击开启或检查浏览器声音权限') }
 }
-function stopAmbient() { if (ambient) { ambient.oscillators.forEach(o => o.stop()); ambient.gain.disconnect(); ambient = null } }
+function stopAmbient() { soundRequested = false; ambient.stop() }
+function handleVisibility() { if (document.hidden) stopAmbient() }
 function toggleMotion() { museum.setting('motion', !museum.settings.motion); if (!museum.settings.motion) gsap.killTweensOf(offset) }
 function handleKeyboard(e) {
   if (e.key === 'Escape') { closeDetail(); settingsOpen.value = false; helpOpen.value = false; quizOpen.value = false }
@@ -179,14 +181,15 @@ onMounted(() => {
   const spot = hotspots.find(h => h.id === route.query.spot)
   if (spot) { activeChapter.value = spot.chapter; offset.value = spot.x; selectHotspot(spot) }
   museum.setting('sound', false)
+  document.addEventListener('visibilitychange', handleVisibility)
 })
-onBeforeUnmount(() => { endTour(); stopAmbient(); cleanupResize?.(); clearTimeout(toastTimer); window.removeEventListener('keydown', handleKeyboard) })
+onBeforeUnmount(() => { endTour(); stopAmbient(); cleanupResize?.(); clearTimeout(toastTimer); window.removeEventListener('keydown', handleKeyboard); document.removeEventListener('visibilitychange', handleVisibility) })
 </script>
 
 <template>
   <div class="museum-app" :class="{ 'no-motion': !museum.settings.motion }">
     <header class="site-header">
-      <a class="brand" href="#/" @click.prevent="go('/')"><span class="brand-seal">汴</span><span><strong>入画汴京</strong><small>BIANJING · A LIVING SCROLL</small></span></a>
+      <a class="brand" href="#/" @click.prevent="go('/')"><span class="brand-seal">汴</span><span><strong>入画汴京</strong><small>INTO BIANJING · A LIVING SCROLL</small></span></a>
       <nav class="desktop-nav" aria-label="主导航"><a v-for="item in nav" :key="item.id" :href="'#' + item.path" :class="{ active: page === item.id }" @click.prevent="go(item.path)">{{ item.name }}<span v-if="page === item.id" class="nav-dot"></span></a></nav>
       <div class="header-actions"><button class="icon-btn" aria-label="环境音" :aria-pressed="museum.settings.sound" @click="toggleSound"><Volume2 v-if="museum.settings.sound" :size="19"/><VolumeX v-else :size="19"/></button><button class="icon-btn" aria-label="打开设置" @click="settingsOpen = true"><Settings2 :size="19"/></button><button class="museum-label" @click="helpOpen = true">数字典藏 <ArrowUpRight :size="14"/></button><button class="icon-btn mobile-menu" aria-label="展开导航" @click="mobileMenu = !mobileMenu"><Menu :size="20"/></button></div>
     </header>
@@ -278,7 +281,7 @@ onBeforeUnmount(() => { endTour(); stopAmbient(); cleanupResize?.(); clearTimeou
 
     <Transition name="modal"><div v-if="selected" class="modal-backdrop" @click.self="closeDetail"><section class="detail-panel" role="dialog" aria-modal="true" :aria-label="selected.title"><button class="close-modal" @click="closeDetail" aria-label="关闭讲解"><X :size="20"/></button><div class="detail-image"><img :src="asset('art/'+chapters[selected.chapter].image+'.webp')" :alt="selected.title"/><span>{{ selected.kind }} · {{ chapters[selected.chapter].title }}</span></div><div class="detail-content"><div class="eyebrow">A STORY IN THE SCROLL</div><h2>{{ selected.title }}</h2><p>{{ selected.text }}</p><div class="observation"><span>不妨细看</span><p>{{ selected.question }}</p></div><div class="detail-audio"><button @click="narration" :aria-label="speaking ? '停止语音讲解' : '播放语音讲解'"><Pause v-if="speaking" :size="20"/><Play v-else :size="20" fill="currentColor"/></button><div><strong>{{ speaking ? '正在为你讲述…' : '听见画中故事' }}</strong><small>中文语音朗读 · 文字即讲解内容</small></div><div class="audio-wave" :class="{playing:speaking}"><i v-for="i in 10" :key="i" :style="{'--i':i}"></i></div></div><div class="detail-actions"><button class="btn outlined" @click="museum.favorite(selected.id)"><Bookmark :size="17" :fill="museum.favorites.includes(selected.id)?'currentColor':'none'"/>{{ museum.favorites.includes(selected.id) ? '已收藏' : '收藏故事' }}</button><button class="btn outlined" @click="share"><Share2 :size="17"/> 分享</button></div><div class="discovered-note"><CheckCircle2 :size="14"/> 已记入探索手记 · {{ museum.visited.length }} / 15 个故事</div></div></section></div></Transition>
 
-    <Transition name="modal"><div v-if="settingsOpen" class="modal-backdrop" @click.self="settingsOpen=false"><section class="simple-modal" role="dialog" aria-modal="true" aria-label="体验设置"><button class="close-modal" @click="settingsOpen=false" aria-label="关闭设置"><X :size="20"/></button><div class="eyebrow">MAKE YOURSELF AT HOME</div><h2>体验设置</h2><p class="muted">按照自己的节奏，欣赏这幅长卷。</p><div class="setting-row"><span><strong>沉浸动效</strong><small>镜头转场、热点呼吸与装饰动画</small></span><button class="switch" :class="{on:museum.settings.motion}" role="switch" :aria-checked="museum.settings.motion" aria-label="沉浸动效" @click="toggleMotion"><i></i></button></div><div class="setting-row"><span><strong>环境音</strong><small>轻柔和弦，陪伴你的漫游</small></span><button class="switch" :class="{on:museum.settings.sound}" role="switch" :aria-checked="museum.settings.sound" aria-label="环境音" @click="toggleSound"><i></i></button></div><div class="setting-row"><span><strong>画卷氛围</strong><small>艺术化光影，不改变原画内容</small></span></div><div class="mode-selector"><button v-for="mode in [{id:'morning',name:'晨雾'},{id:'day',name:'日光'},{id:'night',name:'暮色'}]" :key="mode.id" :class="{active:museum.settings.atmosphere===mode.id}" @click="setAtmosphere(mode.id)">{{ mode.name }}</button></div><p class="settings-note">关闭动效可减轻设备负担。收藏、印章与设置均保存在本机，不需要登录。</p></section></div></Transition>
+    <Transition name="modal"><div v-if="settingsOpen" class="modal-backdrop" @click.self="settingsOpen=false"><section class="simple-modal" role="dialog" aria-modal="true" aria-label="体验设置"><button class="close-modal" @click="settingsOpen=false" aria-label="关闭设置"><X :size="20"/></button><div class="eyebrow">MAKE YOURSELF AT HOME</div><h2>体验设置</h2><p class="muted">按照自己的节奏，欣赏这幅长卷。</p><div class="setting-row"><span><strong>沉浸动效</strong><small>镜头转场、热点呼吸与装饰动画</small></span><button class="switch" :class="{on:museum.settings.motion}" role="switch" :aria-checked="museum.settings.motion" aria-label="沉浸动效" @click="toggleMotion"><i></i></button></div><div class="setting-row"><span><strong>环境音</strong><small>轻柔风水声，陪伴你的漫游</small></span><button class="switch" :class="{on:museum.settings.sound}" role="switch" :aria-checked="museum.settings.sound" aria-label="环境音" @click="toggleSound"><i></i></button></div><div class="setting-row"><span><strong>画卷氛围</strong><small>艺术化光影，不改变原画内容</small></span></div><div class="mode-selector"><button v-for="mode in [{id:'morning',name:'晨雾'},{id:'day',name:'日光'},{id:'night',name:'暮色'}]" :key="mode.id" :class="{active:museum.settings.atmosphere===mode.id}" @click="setAtmosphere(mode.id)">{{ mode.name }}</button></div><p class="settings-note">关闭动效可减轻设备负担。收藏、印章与设置均保存在本机，不需要登录。</p></section></div></Transition>
 
     <Transition name="modal"><div v-if="helpOpen" class="modal-backdrop" @click.self="helpOpen=false"><section class="simple-modal about-modal" role="dialog" aria-modal="true" aria-label="关于作品"><button class="close-modal" @click="helpOpen=false" aria-label="关闭说明"><X :size="20"/></button><div class="mini-seal">宋</div><div class="eyebrow">ART MEETS INTERACTION</div><h2>一幅长卷，一座城。</h2><p>《清明上河图》以细致的笔触描绘北宋城市与市井生活。本展览使用张择端版画卷，以五个章节与十五个观察点带你走近作品。</p><p>作品：北宋 · 张择端 · 绢本设色<br>收藏：故宫博物院<br>图像：Wikimedia Commons · 公共领域</p><a class="text-link" href="https://commons.wikimedia.org/wiki/File:Alongtheriver_QingMing.jpg" target="_blank" rel="noopener noreferrer">查看画作来源 <ArrowUpRight :size="15"/></a><hr/><p class="muted">作者 GitHub：<a href="https://github.com/Karasumikura" target="_blank" rel="noopener noreferrer">Karasumikura</a><br>吉林大学软件学院2024课程项目</p><button class="btn dark" @click="helpOpen=false; go('/scroll')">进入长卷 <ArrowRight :size="17"/></button></section></div></Transition>
 

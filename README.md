@@ -1,10 +1,10 @@
-# 入画汴京
+# 入画汴京 · Into Bianjing
 
 清明上河图数字长卷互动讲解 App。以张择端版公共领域图像为基础，完成移动端与桌面端的交互展览。
 
-**在线体验：[入画汴京 App](https://karasumikura.github.io/qingming-scroll-app/)**
+**在线体验：[入画汴京 App](https://karasumikura.github.io/into-bianjing/)**
 
-源码：https://github.com/Karasumikura/qingming-scroll-app
+源码：https://github.com/Karasumikura/into-bianjing
 
 ## 本地启动
 
@@ -28,7 +28,7 @@ npm run dev
 - 汴京寻宝：故事发现记录、四枚成就印章、五题知识问答与最高成绩。
 - 自动导览：2 分 30 秒章节巡游、中文讲解、暂停/继续、前后章节、实时进度。
 - 我的藏阁：收藏列表、定位到原画、本机持久保存。
-- 设置：晨雾/日光/暮色艺术化氛围、环境和弦音、减少动效模式、系统 reduced-motion 支持。
+- 设置：晨雾/日光/暮色艺术化氛围、合成风水环境音（淡入淡出、后台自动关闭）、减少动效模式、系统 reduced-motion 支持。
 - PWA：生产版本支持添加到手机桌面，服务工作线程成功缓存后可离线浏览。
 
 ## 生产构建与检查
@@ -40,7 +40,7 @@ npx playwright install chromium
 npm test
 ```
 
-`dist/` 是可部署的静态前端。默认构建预览地址为 http://localhost:4173 。GitHub Pages 使用下面的构建命令，预览时访问 http://localhost:4173/qingming-scroll-app/ 。在支持 PWA 的手机浏览器中，可以通过“安装应用”或“添加到主屏幕”安装；localhost 可用于本机验证。离线功能需要首次在线访问并等待资源缓存完成。
+`dist/` 是可部署的静态前端。默认构建预览地址为 http://localhost:4173 。GitHub Pages 使用下面的构建命令，预览时访问 http://localhost:4173/into-bianjing/ 。在支持 PWA 的手机浏览器中，可以通过“安装应用”或“添加到主屏幕”安装；localhost 可用于本机验证。离线功能需要首次在线访问并等待资源缓存完成。
 
 ```sh
 npm run build:pages

@@ -1,14 +1,14 @@
 {
-  "name": "qingming-scroll-app",
-  "version": "1.0.0",
+  "name": "into-bianjing",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "build:pages": "vite build --base=/qingming-scroll-app/",
+    "build:pages": "vite build --base=/into-bianjing/",
     "preview": "vite preview --host 0.0.0.0",
-    "preview:pages": "vite preview --host 0.0.0.0 --base=/qingming-scroll-app/",
+    "preview:pages": "vite preview --host 0.0.0.0 --base=/into-bianjing/",
     "test": "playwright test"
   },
   "dependencies": {
