@@ -43,8 +43,8 @@ npm test
 `dist/` 是可部署的静态前端。默认构建预览地址为 http://localhost:4173 。GitHub Pages 使用下面的构建命令，预览时访问 http://localhost:4173/qingming-scroll-app/ 。在支持 PWA 的手机浏览器中，可以通过“安装应用”或“添加到主屏幕”安装；localhost 可用于本机验证。离线功能需要首次在线访问并等待资源缓存完成。
 
 ```sh
-npm run build -- --base=/qingming-scroll-app/
-npm run preview
+npm run build:pages
+npm run preview:pages
 ```
 
 GitHub Pages 从 `gh-pages` 分支根目录发布。该分支包含本命令生成的静态文件，源码保存在 `main` 分支。修改代码后需要重新构建并更新发布分支。
