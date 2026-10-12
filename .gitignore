@@ -1,0 +1,9 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+assets-source/
+diagnostic.png
+*.log
+.env
+.env.*

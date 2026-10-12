@@ -1,0 +1,20 @@
+import { chromium } from '@playwright/test'
+import assert from 'node:assert/strict'
+const browser = await chromium.launch()
+const context = await browser.newContext({ viewport: { width:390, height:844 } })
+const page = await context.newPage()
+const errors = []; page.on('pageerror',e=>errors.push(e.message))
+const appUrl = process.env.APP_URL || 'http://localhost:4173/'
+await page.goto(appUrl)
+await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller), { timeout:30000 })
+await context.setOffline(true)
+await page.reload()
+await page.getByRole('heading', { name:/千年汴京/ }).waitFor()
+await page.locator('.bottom-nav').getByRole('link',{name:'长卷漫游'}).click()
+await page.locator('.scroll-stage').waitFor()
+await page.waitForFunction(()=>[...document.querySelectorAll('.scroll-art-layer>img')].every(img=>img.complete && img.naturalWidth>0))
+assert.equal(await page.locator('.scroll-art-layer>img').count(),16)
+assert.deepEqual(errors,[])
+await page.screenshot({path:'test-results/offline-mobile.png',fullPage:true})
+console.log('PASS: production app loads offline, all 16 local scroll tiles decoded, no runtime errors.')
+await browser.close()
