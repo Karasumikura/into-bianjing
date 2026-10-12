@@ -4,6 +4,8 @@
 
 **在线体验：[入画汴京 App](https://karasumikura.github.io/into-bianjing/)**
 
+**安卓安装：[下载 APK](https://github.com/Karasumikura/into-bianjing/releases/latest)**（Android 6.0 及以上，建议使用较新的 Android System WebView）。
+
 源码：https://github.com/Karasumikura/into-bianjing
 
 ## 本地启动
@@ -74,4 +76,19 @@ Vue 3、Vue Router、Pinia、GSAP、Canvas 2D、Web Audio、Web Speech、Vite。
 
 首页进入长卷 → 拖动与缩放 → 点击虹桥热点 → 听讲解与收藏 → 主题探索搜索 → 寻宝问答解锁印章 → 自动导览 → 切换暮色 → 藏阁验证收藏。
 
-交付形态是可安装的移动 Web App（PWA），不是原生 Android APK / iOS 安装包。探索记录与成绩保存在当前浏览器，不使用服务器账号。
+提供 Web/PWA 和 Capacitor 安卓 APK 两种形态。APK 内置画卷与页面，首次启动无需联网；安卓讲解使用系统 TTS，需要设备支持中文语音。探索记录与成绩保存在本机，不使用服务器账号；网页版与 APK 的记录独立。
+
+## 安卓构建
+
+需要 JDK 21、Android SDK Platform 36、Build Tools 36.0.0。Windows 请将项目放在仅包含英文字符的目录，例如 `C:\\Projects\\into-bianjing`。在 `android/local.properties` 指定本机 SDK 路径；该文件不提交。
+
+```sh
+npm ci
+npm run android:sync
+cd android
+./gradlew assembleDebug
+```
+
+Windows 使用 `gradlew.bat assembleDebug`。调试 APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`。正式发布使用 `assembleRelease`，再用 Android SDK 的 `zipalign` 和 `apksigner` 对生成的 unsigned APK 对齐与签名。签名密钥保存在仓库外，后续更新应沿用相同密钥。
+
+`npm run android:sync` 会先以根路径重新构建网页，再同步安卓资源；不要直接同步 GitHub Pages 的子路径构建。修改图标后运行 `node scripts/android-icons.mjs`。安卓返回键先关闭弹窗，再返回首页；进入后台会暂停讲解与环境音。

@@ -7,3 +7,5 @@ diagnostic.png
 *.log
 .env
 .env.*
+*.jks
+*.keystore

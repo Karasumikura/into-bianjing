@@ -7,6 +7,8 @@ import { chapters, hotspots, routes, questions } from './data'
 import { useMuseum } from './store'
 import InkAtmosphere from './components/InkAtmosphere.vue'
 import { createAmbient } from './ambient'
+import { Capacitor } from '@capacitor/core'
+import { TextToSpeech } from '@capacitor-community/text-to-speech'
 const asset = path => import.meta.env.BASE_URL + path
 const route = useRoute(), router = useRouter(), museum = useMuseum()
 const page = computed(() => route.path.slice(1) || 'home')
@@ -40,9 +42,25 @@ const ambient = createAmbient(enabled => {
 const drag = { down: false, x: 0, y: 0, pan: 0, offset: 0, moved: false, velocity: 0, lastX: 0, lastTime: 0, pinched: false }
 function notify(message) { toast.value = message; clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.value = '', 3200) }
 function go(path) { mobileMenu.value = false; router.push(path); window.scrollTo({ top: 0, behavior: museum.settings.motion ? 'smooth' : 'instant' }) }
-function stopSpeech() { speechToken++; window.speechSynthesis?.cancel(); speaking.value = false }
-function speak(text) {
-  stopSpeech()
+function stopSpeech() {
+  speechToken++; speaking.value = false
+  if (Capacitor.isNativePlatform()) return TextToSpeech.stop().catch(() => {})
+  window.speechSynthesis?.cancel()
+}
+async function speak(text) {
+  const stopped = stopSpeech()
+  if (Capacitor.isNativePlatform()) {
+    const token = speechToken
+    await stopped
+    if (token !== speechToken) return
+    speaking.value = true
+    try {
+      await TextToSpeech.speak({ text, lang:'zh-CN', rate:.92, queueStrategy:0 })
+    } catch {
+      if (token === speechToken) notify('中文讲解暂不可用，请在手机设置中安装中文语音；文字讲解仍可阅读')
+    } finally { if (token === speechToken) speaking.value = false }
+    return
+  }
   if (!('speechSynthesis' in window)) { notify('此浏览器不支持语音朗读，请阅读下方文字讲解'); return }
   const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; u.rate = .92
   const voices = window.speechSynthesis.getVoices()
@@ -123,7 +141,9 @@ function beginQuiz() { quizOpen.value = true; quizIndex.value = 0; answer.value 
 function pickAnswer(index) { if (answer.value !== null) return; answer.value = index; if (index === questions[quizIndex.value].correct) quizScore.value++ }
 function nextQuestion() { if (quizIndex.value === questions.length - 1) { quizDone.value = true; museum.score(quizScore.value) } else { quizIndex.value++; answer.value = null } }
 async function share() {
-  const h = selected.value; const url = location.origin + location.pathname + '#/scroll?spot=' + h.id
+  const h = selected.value
+  const base = Capacitor.isNativePlatform() ? 'https://karasumikura.github.io/into-bianjing/' : location.origin + location.pathname
+  const url = base + '#/scroll?spot=' + h.id
   try {
     if (navigator.share) await navigator.share({ title: '入画汴京 · ' + h.title, text: h.text, url })
     else { await navigator.clipboard.writeText(url); notify('故事链接已复制') }
@@ -138,7 +158,9 @@ async function toggleSound() {
   } catch { soundRequested = false; notify('环境音未能播放，请再次点击开启或检查浏览器声音权限') }
 }
 function stopAmbient() { soundRequested = false; ambient.stop() }
-function handleVisibility() { if (document.hidden) stopAmbient() }
+function handleVisibility() {
+  if (document.hidden) { stopAmbient(); stopSpeech(); if (guided.value) guidePaused.value = true }
+}
 function toggleMotion() { museum.setting('motion', !museum.settings.motion); if (!museum.settings.motion) gsap.killTweensOf(offset) }
 function handleKeyboard(e) {
   if (e.key === 'Escape') { closeDetail(); settingsOpen.value = false; helpOpen.value = false; quizOpen.value = false }

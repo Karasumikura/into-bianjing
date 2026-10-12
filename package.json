@@ -1,6 +1,6 @@
 {
   "name": "into-bianjing",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,9 +9,15 @@
     "build:pages": "vite build --base=/into-bianjing/",
     "preview": "vite preview --host 0.0.0.0",
     "preview:pages": "vite preview --host 0.0.0.0 --base=/into-bianjing/",
-    "test": "playwright test"
+    "test": "playwright test",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor-community/text-to-speech": "^6.1.0",
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/core": "^7.6.9",
     "gsap": "^3.14.0",
     "lucide-vue-next": "^0.468.0",
     "pinia": "^3.0.4",
@@ -19,6 +25,7 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.9",
     "@playwright/test": "^1.56.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "sharp": "^0.35.5",

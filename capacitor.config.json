@@ -1,0 +1,7 @@
+{
+  "appId": "io.github.karasumikura.intobianjing",
+  "appName": "入画汴京",
+  "webDir": "dist",
+  "backgroundColor": "#f7f6f1",
+  "android": { "allowMixedContent": false, "adjustMarginsForEdgeToEdge": "force" }
+}
